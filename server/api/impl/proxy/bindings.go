@@ -65,7 +65,7 @@ func (p *Proxy) GetBindings(cc *api.Context) ([]*api.Binding, error) {
 }
 
 // scanAppBindings removes bindings to locations that have not been granted to
-// the App, and sets the AppID on the relevant elements.
+// the App, and sets the AppID and fully qualified location on the relevant elements.
 func (p *Proxy) scanAppBindings(app *api.App, bindings []*api.Binding, locPrefix api.Location) []*api.Binding {
 	out := []*api.Binding{}
 	for _, appB := range bindings {
