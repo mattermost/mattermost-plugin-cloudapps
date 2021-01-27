@@ -87,6 +87,7 @@ func (p *Proxy) scanAppBindings(app *api.App, bindings []*api.Binding, locPrefix
 
 		if !fql.IsTop() {
 			b.AppID = app.Manifest.AppID
+			b.Location = fql
 		}
 
 		if len(b.Bindings) != 0 {
