@@ -1,10 +1,18 @@
 package proxy
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	pluginapi "github.com/mattermost/mattermost-plugin-api"
 	"github.com/mattermost/mattermost-plugin-apps/server/api"
+	"github.com/mattermost/mattermost-plugin-apps/server/api/mock_api"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -175,42 +183,232 @@ func TestMergeBindings(t *testing.T) {
 	}
 }
 
-// []*api.Binding{
-// 	{
-// 		Location: api.LocationCommand,
-// 		Bindings: []*api.Binding{
-// 			{
-// 				Location:  "message",
-// 				Hint:        "[--user] message",
-// 				Description: "send a message to a user",
-// 				Call:        h.makeCall(PathMessage),
-// 			}, {
-// 				Location:  "manage",
-// 				Hint:        "subscribe | unsubscribe ",
-// 				Description: "manage channel subscriptions to greet new users",
-// 				Bindings: []*api.Binding{
-// 					{
-// 						Location:  "subscribe",
-// 						Hint:        "[--channel]",
-// 						Description: "subscribes a channel to greet new users",
-// 						Call:        h.makeCall(PathMessage, "mode", "on"),
-// 					}, {
-// 						Location:  "unsubscribe",
-// 						Hint:        "[--channel]",
-// 						Description: "unsubscribes a channel from greeting new users",
-// 						Call:        h.makeCall(PathMessage, "mode", "off"),
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}, {
-// 		Location: api.LocationPostMenu,
-// 		Bindings: []*api.Binding{
-// 			{
-// 				Location:  "message",
-// 				Description: "message a user",
-// 				Call:        h.makeCall(PathMessage),
-// 			},
-// 		},
-// 	},
-// })
+func TestGetBindingsGrantedLocations(t *testing.T) {
+	type TC struct {
+		name        string
+		locations   api.Locations
+		numBindings int
+	}
+
+	for _, tc := range []TC{
+		{
+			name: "3 locations granted",
+			locations: api.Locations{
+				api.Location(api.LocationChannelHeader),
+				api.Location(api.LocationPostMenu),
+				api.Location(api.LocationCommand),
+			},
+			numBindings: 3,
+		},
+		{
+			name: "command location granted",
+			locations: api.Locations{
+				api.Location(api.LocationCommand),
+			},
+			numBindings: 1,
+		},
+		{
+			name: "channel header location granted",
+			locations: api.Locations{
+				api.Location(api.LocationChannelHeader),
+			},
+			numBindings: 1,
+		},
+		{
+			name: "post dropdown location granted",
+			locations: api.Locations{
+				api.Location(api.LocationPostMenu),
+			},
+			numBindings: 1,
+		},
+		{
+			name:        "no granted locations",
+			locations:   api.Locations{},
+			numBindings: 0,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bindings := []*api.Binding{
+				{
+					Location: api.LocationChannelHeader,
+					Bindings: []*api.Binding{
+						{
+							Location: "send",
+						},
+					},
+				}, {
+					Location: api.LocationPostMenu,
+					Bindings: []*api.Binding{
+						{
+							Location: "send-me",
+						},
+					},
+				}, {
+					Location: api.LocationCommand,
+					Bindings: []*api.Binding{
+						{
+							Location: "message",
+						},
+					},
+				},
+			}
+
+			app1 := &api.App{
+				Manifest: &api.Manifest{
+					AppID:              api.AppID("app1"),
+					Type:               api.AppTypeBuiltin,
+					RequestedLocations: tc.locations,
+				},
+				GrantedLocations: tc.locations,
+			}
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			proxy := newTestProxyForBindings(app1, bindings, ctrl)
+
+			cc := &api.Context{}
+			out, err := proxy.GetBindings(cc)
+			require.NoError(t, err)
+			require.Len(t, out, tc.numBindings)
+		})
+	}
+}
+
+func TestGetBindingsFQL(t *testing.T) {
+	initial := []*api.Binding{
+		{
+			Location: api.LocationChannelHeader,
+			Bindings: []*api.Binding{
+				{
+					Location: "send",
+				},
+			},
+		}, {
+			Location: api.LocationPostMenu,
+			Bindings: []*api.Binding{
+				{
+					Location: "send-me",
+				},
+				{
+					Location: "send",
+				},
+			},
+		}, {
+			Location: api.LocationCommand,
+			Bindings: []*api.Binding{
+				{
+					Location: "message",
+				}, {
+					Location: "message-modal",
+				}, {
+					Location: "manage",
+					Bindings: []*api.Binding{
+						{
+							Location: "subscribe",
+						}, {
+							Location: "unsubscribe",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expected := []*api.Binding{
+		{
+			Location: api.LocationChannelHeader,
+			Bindings: []*api.Binding{
+				{
+					AppID:    api.AppID("app1"),
+					Location: "/channel_header/send",
+				},
+			},
+		}, {
+			Location: api.LocationPostMenu,
+			Bindings: []*api.Binding{
+				{
+					AppID:    api.AppID("app1"),
+					Location: "/post_menu/send-me",
+				},
+				{
+					AppID:    api.AppID("app1"),
+					Location: "/post_menu/send",
+				},
+			},
+		}, {
+			Location: api.LocationCommand,
+			Bindings: []*api.Binding{
+				{
+					AppID:    api.AppID("app1"),
+					Location: "/command/message",
+				}, {
+					AppID:    api.AppID("app1"),
+					Location: "/command/message-modal",
+				}, {
+					AppID:    api.AppID("app1"),
+					Location: "/command/manage",
+					Bindings: []*api.Binding{
+						{
+							AppID:    api.AppID("app1"),
+							Location: "/command/manage/subscribe",
+						}, {
+							AppID:    api.AppID("app1"),
+							Location: "/command/manage/unsubscribe",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	app := &api.App{
+		Manifest: &api.Manifest{
+			AppID: api.AppID("app1"),
+			Type:  api.AppTypeBuiltin,
+		},
+		GrantedLocations: api.Locations{
+			api.Location(api.LocationChannelHeader),
+			api.Location(api.LocationPostMenu),
+			api.Location(api.LocationCommand),
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	proxy := newTestProxyForBindings(app, initial, ctrl)
+
+	cc := &api.Context{}
+	out, err := proxy.GetBindings(cc)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
+}
+
+func newTestProxyForBindings(app *api.App, bindings []*api.Binding, ctrl *gomock.Controller) *Proxy {
+	pluginAPI := &plugintest.API{}
+	pluginAPI.On("LogDebug", mock.Anything).Return(nil)
+	mm := pluginapi.NewClient(pluginAPI)
+
+	s := mock_api.NewMockStore(ctrl)
+	s.EXPECT().ListApps().Return([]*api.App{app})
+
+	up := mock_api.NewMockUpstream(ctrl)
+
+	p := &Proxy{
+		mm:    mm,
+		store: s,
+		builtIn: map[api.AppID]api.Upstream{
+			api.AppID("app1"): up,
+		},
+	}
+
+	cr := &api.CallResponse{
+		Data: bindings,
+	}
+	bb, _ := json.Marshal(cr)
+	reader := ioutil.NopCloser(bytes.NewReader(bb))
+	up.EXPECT().Roundtrip(gomock.Any()).Return(reader, nil)
+
+	return p
+}

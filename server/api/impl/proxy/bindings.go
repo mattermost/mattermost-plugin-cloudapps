@@ -9,7 +9,7 @@ import (
 )
 
 func mergeBindings(bb1, bb2 []*api.Binding) []*api.Binding {
-	out := append([]*api.Binding(nil), bb1...)
+	out := append([]*api.Binding{}, bb1...)
 
 	for _, b2 := range bb2 {
 		found := false
