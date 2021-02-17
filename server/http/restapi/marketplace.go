@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -49,6 +50,8 @@ func (a *restapi) getApps() ([]MarketplaceApp, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to list local apps")
 	}
+
+	log.Printf("registeredApps: %#+v\n", registeredApps)
 
 	result := make([]MarketplaceApp, len(registeredApps))
 	for i := 0; i < len(registeredApps); i++ {

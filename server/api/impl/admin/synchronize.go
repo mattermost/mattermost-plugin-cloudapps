@@ -6,6 +6,7 @@ package admin
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -73,24 +74,33 @@ func (adm *Admin) LoadAppsList() error {
 		return errors.Wrap(err, "can't get apps for installation")
 	}
 
+	log.Printf("appsForInstallation: %#+v\n", appsForInstallation)
+
 	adm.populateManifests(appsForInstallation)
 
 	registeredApps := adm.store.App().GetAll()
 
+	log.Printf("registeredApps: %#+v\n", registeredApps)
+	log.Printf("registeredApps[0]: %#+v\n", *registeredApps[0])
+
 	registeredAppsMap := map[apps.AppID]*apps.App{}
 	updatedAppVersionsMap := apps.AppVersionMap{}
 	// Update apps
+	log.Println("a")
 	for _, registeredApp := range registeredApps {
+		log.Println("a1")
 		registeredAppsMap[registeredApp.Manifest.AppID] = registeredApp
 		manifest, err := adm.store.Manifest().Get(registeredApp.Manifest.AppID)
 		if err != nil {
 			adm.mm.Log.Error("can't load manifest from store", "app_id", registeredApp.Manifest.AppID)
 			continue
 		}
-		if err := adm.UninstallApp(registeredApp); err != nil {
-			adm.mm.Log.Error("can't uninstall an app", "app_id", registeredApp.Manifest.AppID)
-			continue
-		}
+		/*
+			if err := adm.UninstallApp(registeredApp); err != nil {
+				adm.mm.Log.Error("can't uninstall an app", "app_id", registeredApp.Manifest.AppID)
+				continue
+			}
+		*/
 		if manifest.Version != registeredApp.Manifest.Version {
 			// update app in proxy plugin
 			oldVersion := registeredApp.Manifest.Version
@@ -102,8 +112,10 @@ func (adm *Admin) LoadAppsList() error {
 		}
 	}
 
+	log.Println("b")
 	// register new apps
 	for appID, manifest := range adm.store.Manifest().GetAll() {
+		log.Println("b1")
 		if _, ok := registeredAppsMap[appID]; ok {
 			continue
 		}
@@ -114,8 +126,10 @@ func (adm *Admin) LoadAppsList() error {
 
 	registeredAppsUpgraded := adm.store.App().GetAll()
 
+	log.Println("c")
 	// call onInstanceStartup. App migration happens here
 	for _, registeredApp := range registeredAppsUpgraded {
+		log.Println("c1")
 		if registeredApp.Status == apps.AppStatusInstalled {
 			values := map[string]string{}
 			if _, ok := updatedAppVersionsMap[registeredApp.Manifest.AppID]; ok {
