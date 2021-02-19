@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"fmt"
+	"log"
+	glog "log"
 
 	"github.com/pkg/errors"
 
@@ -38,6 +40,7 @@ func (p *Proxy) GetBindings(cc *apps.Context) ([]*apps.Binding, error) {
 
 	all := []*apps.Binding{}
 	for _, app := range allApps {
+		glog.Printf("app: %#+v\n", app)
 		appID := app.Manifest.AppID
 		appCC := *cc
 		appCC.AppID = appID
@@ -60,6 +63,7 @@ func (p *Proxy) GetBindings(cc *apps.Context) ([]*apps.Binding, error) {
 		if err != nil {
 			p.mm.Log.Error(fmt.Sprintf("failed to get bindings for %s: %v", appID, err))
 		}
+		glog.Printf("bindings: %#+v\n", bindings)
 		all = mergeBindings(all, p.scanAppBindings(app, bindings, ""))
 	}
 
@@ -75,6 +79,7 @@ func (p *Proxy) scanAppBindings(app *apps.App, bindings []*apps.Binding, locPref
 		b := *appB
 		fql := locPrefix.Make(b.Location)
 		allowed := false
+		log.Printf("app.GrantedLocations: %#+v\n", app.GrantedLocations)
 		for _, grantedLoc := range app.GrantedLocations {
 			if fql.In(grantedLoc) || grantedLoc.In(fql) {
 				allowed = true

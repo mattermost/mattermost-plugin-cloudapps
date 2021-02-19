@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"log"
 
 	"github.com/aws/aws-sdk-go/service/lambda"
 
@@ -32,7 +33,21 @@ func (u *Upstream) OneWay(call *apps.Call) error {
 }
 
 func (u *Upstream) Roundtrip(call *apps.Call) (io.ReadCloser, error) {
-	bb, err := u.aws.InvokeLambda(u.app.Manifest.AppID, u.app.Manifest.Version, call.URL, lambda.InvocationTypeRequestResponse, call)
+	log.Printf("call: %#+v\n", *call)
+	req := struct {
+		Path       string            `json:"path"`
+		HTTPMethod string            `json:"httpMethod"`
+		Headers    map[string]string `json:"headers"`
+		Body       interface{}       `json:"body"`
+	}{
+		Path:       call.URL,
+		HTTPMethod: "POST",
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       call,
+	}
+	log.Printf("req: %#+v\n", req)
+
+	bb, err := u.aws.InvokeLambda(u.app.Manifest.AppID, u.app.Manifest.Version, u.app.Manifest.Functions[0].Name, lambda.InvocationTypeRequestResponse, req)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,8 @@
 package store
 
 import (
+	"log"
+
 	"github.com/mattermost/mattermost-plugin-apps/apps"
 	"github.com/mattermost/mattermost-plugin-apps/server/api"
 	"github.com/mattermost/mattermost-plugin-apps/server/utils"
@@ -53,11 +55,14 @@ func (s AppStore) Save(app *apps.App) error {
 	if len(conf.Apps) == 0 {
 		conf.Apps = map[string]interface{}{}
 	}
-	// do not store manifest in the config
-	app.AppID = app.Manifest.AppID
-	app.Manifest = nil
 
-	conf.Apps[string(app.AppID)] = app.ConfigMap()
+	cApp := &apps.App{}
+	*cApp = *app
+	// do not store manifest in the config
+	cApp.AppID = app.Manifest.AppID
+	cApp.Manifest = nil
+
+	conf.Apps[string(cApp.AppID)] = cApp.ConfigMap()
 
 	// Refresh the local config immediately, do not wait for the
 	// OnConfigurationChange.
@@ -87,6 +92,7 @@ func (s AppStore) populateAppWithManifest(app *apps.App) *apps.App {
 	if err != nil {
 		s.mm.Log.Error("This should not have happened. No manifest available for", "app_id", app.AppID)
 	}
+	log.Printf("populated with manifest: %#+v\n", manifest)
 	app.Manifest = manifest
 	return app
 }

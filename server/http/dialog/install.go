@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -137,6 +138,7 @@ func (d *dialog) handleInstall(w http.ResponseWriter, req *http.Request) {
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
+	log.Printf("stateData: %#+v\n", stateData)
 
 	app, out, err := d.api.Admin.InstallApp(
 		&apps.Context{

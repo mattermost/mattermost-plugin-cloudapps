@@ -93,7 +93,7 @@ func (s *service) installApp(manifest *apps.Manifest, appSecret string, force bo
 	// Finish the installation when the Dialog is submitted, see
 	// <plugin>/http/dialog/install.go
 	err = s.api.Mattermost.Frontend.OpenInteractiveDialog(
-		dialog.NewInstallAppDialog(app.Manifest, app.Secret, conf.PluginURL, params.commandArgs))
+		dialog.NewInstallAppDialog(manifest, app.Secret, conf.PluginURL, params.commandArgs))
 	if err != nil {
 		return errorOut(params, errors.Wrap(err, "couldn't open an interactive dialog"))
 	}
@@ -105,7 +105,7 @@ func (s *service) installApp(manifest *apps.Manifest, appSecret string, force bo
 
 	return &model.CommandResponse{
 		GotoLocation: params.commandArgs.SiteURL + "/" + team.Name + "/messages/@" + app.BotUsername,
-		Text:         fmt.Sprintf("redirected to the DM with @%s to continue installing **%s**", app.BotUsername, app.Manifest.DisplayName),
+		Text:         fmt.Sprintf("redirected to the DM with @%s to continue installing **%s**", app.BotUsername, manifest.DisplayName),
 		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 	}, nil
 }

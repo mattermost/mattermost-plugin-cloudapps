@@ -81,7 +81,8 @@ func (adm *Admin) LoadAppsList() error {
 	registeredApps := adm.store.App().GetAll()
 
 	log.Printf("registeredApps: %#+v\n", registeredApps)
-	log.Printf("registeredApps[0]: %#+v\n", *registeredApps[0])
+	//log.Printf("registeredApps[0]: %#+v\n", *registeredApps[0])
+	//log.Printf("registeredApps[0].Manifest: %#+v\n", *registeredApps[0].Manifest)
 
 	registeredAppsMap := map[apps.AppID]*apps.App{}
 	updatedAppVersionsMap := apps.AppVersionMap{}
@@ -102,6 +103,7 @@ func (adm *Admin) LoadAppsList() error {
 			}
 		*/
 		if manifest.Version != registeredApp.Manifest.Version {
+			log.Println("updating app")
 			// update app in proxy plugin
 			oldVersion := registeredApp.Manifest.Version
 			registeredApp.Manifest = manifest

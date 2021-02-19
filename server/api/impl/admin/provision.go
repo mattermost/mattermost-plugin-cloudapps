@@ -36,6 +36,7 @@ func (adm *Admin) ProvisionApp(cc *apps.Context, sessionToken apps.SessionToken,
 
 	app := &apps.App{
 		Manifest:       manifest,
+		Status:         apps.AppStatusInstalled,
 		BotUserID:      bot.UserId,
 		BotUsername:    bot.Username,
 		BotAccessToken: token.Token,
@@ -48,7 +49,7 @@ func (adm *Admin) ProvisionApp(cc *apps.Context, sessionToken apps.SessionToken,
 	adm.store.Manifest().Save(manifest)
 
 	md := md.Markdownf("Provisioned App %s [%s](%s). Bot user @%s.",
-		app.Manifest.AppID, app.Manifest.DisplayName, app.Manifest.HomepageURL, app.BotUsername)
+		manifest.AppID, manifest.DisplayName, manifest.HomepageURL, app.BotUsername)
 
 	return app, md, nil
 }
