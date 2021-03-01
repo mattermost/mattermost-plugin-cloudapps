@@ -40,11 +40,15 @@ func kvKey(namespace, prefix, id string) string {
 
 	namespaceHash := md5.Sum([]byte(namespace)) // nolint:gosec
 	idHash := md5.Sum([]byte(id))               // nolint:gosec
-	return strings.Join([]string{
+	key := strings.Join([]string{
 		hex.EncodeToString(namespaceHash[:]),
 		prefix,
 		hex.EncodeToString(idHash[:]),
 	}, "/")
+
+	newKey := md5.Sum([]byte(key))
+	newKeyHash := hex.EncodeToString(newKey[:])
+	return newKeyHash
 }
 
 // TODO use raw byte API: for now all JSON is re-encoded to use api.Mattermost API

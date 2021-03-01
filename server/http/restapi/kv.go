@@ -20,8 +20,8 @@ func (a *restapi) kvList(w http.ResponseWriter, req *http.Request, botUserID, pr
 
 func (a *restapi) kvGet(w http.ResponseWriter, req *http.Request, botUserID, prefix string) {
 	id := mux.Vars(req)["key"]
-	out := map[string]interface{}{}
-	err := a.api.AppServices.KVGet(botUserID, prefix, id, out)
+	var out interface{}
+	err := a.api.AppServices.KVGet(botUserID, prefix, id, &out)
 	if err != nil {
 		httputils.WriteInternalServerError(w, err)
 		return
@@ -36,7 +36,7 @@ func (a *restapi) kvHead(w http.ResponseWriter, req *http.Request, botUserID, pr
 func (a *restapi) kvPut(w http.ResponseWriter, req *http.Request, botUserID, prefix string) {
 	id := mux.Vars(req)["key"]
 
-	in := map[string]interface{}{}
+	var in interface{}
 	// TODO size limit
 	err := json.NewDecoder(req.Body).Decode(&in)
 	if err != nil {

@@ -40,6 +40,8 @@ func (p *Proxy) GetBindings(cc *api.Context) ([]*api.Binding, error) {
 		appID := app.Manifest.AppID
 		appCC := *cc
 		appCC.AppID = appID
+		appCC.BotAccessToken = app.BotAccessToken
+		// appCC.AdminAccessToken = app.AdminAccessToken
 
 		up, err := p.upstreamForApp(app)
 		if err != nil {
@@ -52,7 +54,7 @@ func (p *Proxy) GetBindings(cc *api.Context) ([]*api.Binding, error) {
 		if bindingsCall == nil {
 			bindingsCall = api.DefaultBindingsCall
 		}
-		bindingsCall.Context = cc
+		bindingsCall.Context = &appCC
 
 		bindings, err := upstream.GetBindings(up, bindingsCall)
 		if err != nil {
