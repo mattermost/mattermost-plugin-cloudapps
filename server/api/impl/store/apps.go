@@ -4,6 +4,8 @@
 package store
 
 import (
+	"log"
+
 	"github.com/mattermost/mattermost-plugin-apps/apps"
 	"github.com/mattermost/mattermost-plugin-apps/server/api"
 	"github.com/mattermost/mattermost-plugin-apps/server/utils"
@@ -22,6 +24,7 @@ func newAppStore(st *Store) api.AppStore {
 
 func (s AppStore) GetAll() []*apps.App {
 	conf := s.conf.GetConfig()
+	log.Printf("conf: %#+v\n", conf)
 	out := []*apps.App{}
 	if len(conf.Apps) == 0 {
 		return out

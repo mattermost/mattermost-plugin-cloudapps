@@ -4,6 +4,7 @@
 package main
 
 import (
+	"log"
 	gohttp "net/http"
 	"os"
 
@@ -63,7 +64,9 @@ func (p *Plugin) OnActivate() error {
 	}
 
 	stored := api.StoredConfig{}
+	log.Printf("stored: %#+v\n", stored)
 	_ = p.mm.Configuration.LoadPluginConfiguration(&stored)
+	log.Printf("stored: %#+v\n", stored)
 
 	accessKey := os.Getenv("APPS_INVOKE_AWS_ACCESS_KEY")
 	if accessKey == "" {
@@ -78,6 +81,7 @@ func (p *Plugin) OnActivate() error {
 
 	conf := configurator.NewConfigurator(mm, awsClient, p.BuildConfig, botUserID)
 	_ = conf.RefreshConfig(&stored)
+	log.Printf("stored: %#+v\n", stored)
 	store := store.New(mm, conf)
 	proxy := proxy.NewProxy(mm, awsClient, conf, store)
 
